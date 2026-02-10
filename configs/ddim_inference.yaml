@@ -1,0 +1,35 @@
+# configs/ddim_inference.yaml
+project_name: "ddim-fast-sampling"
+run_name: "ddim-50-steps"
+
+model_checkpoint: "checkpoints/ddpm_final.pth"
+
+dataset:
+  name: "MNIST"
+  img_size: 32
+  channels: 1
+
+# Same as training config
+model:
+  type: "unet"
+  base_channels: 32
+  channel_mult: [1, 2, 4]
+  num_res_blocks: 2
+  attention: [false, false, false]
+  dropout: 0.1
+
+# DDIM-specific parameters
+ddim:
+  timesteps: 1000           # Original training timesteps
+  sampling_steps: 50        # Can be 10, 20, 50, 100, etc.
+  eta: 0.0                  # 0 = deterministic DDIM, 1 = stochastic DDIM
+  schedule: "linear"        # Same as training
+
+inference:
+  num_samples: 64
+  batch_size: 16
+  seed: 42                  # For reproducibility
+
+mlflow:
+  experiment_name: "DDIM_VS_DDPM"
+  tracking_uri: "file://./mlruns"
