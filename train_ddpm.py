@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import mlflow
 from tqdm import tqdm
 import sys
-import torchvision  # For saving images
+import torchvision 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,7 +19,7 @@ def train_one_epoch(model, dataloader, diffusion, optimizer, device, config, epo
     pbar = tqdm(dataloader)
     total_loss = 0
     
-    # Get loss type from config (default to "l2" if not specified)
+    # Get loss type from config (default to "l2")
     loss_type = config.get('train', {}).get('loss_type', 'l2')
     
     for batch_idx, (images, _) in enumerate(pbar):
@@ -27,7 +27,6 @@ def train_one_epoch(model, dataloader, diffusion, optimizer, device, config, epo
         # Sample random timesteps for each image in the batch
         t = torch.randint(0, config['diffusion']['timesteps'], (images.shape[0],), device=device).long()
         
-        # Use the new p_losses method for cleaner code
         optimizer.zero_grad()
         loss = diffusion.p_losses(model, images, t, loss_type=loss_type)
         loss.backward()
@@ -43,7 +42,7 @@ def train_one_epoch(model, dataloader, diffusion, optimizer, device, config, epo
         if batch_idx % 10 == 0:
             mlflow.log_metric("train_loss_step", loss.item(), step=epoch * len(dataloader) + batch_idx)
             
-            # Optional: Log gradient norms for debugging
+            # Log gradient norms for debugging
             total_norm = 0
             for p in model.parameters():
                 if p.grad is not None:
@@ -63,12 +62,12 @@ def sample_and_log_images(model, diffusion, config, device, epoch, num_samples=8
                        config['dataset']['img_size'], 
                        config['dataset']['img_size'])
         
-        # Generate samples with intermediate steps for visualization
+        # Generate samples
         final_samples, intermediate_samples = diffusion.sample(
             model, 
             sample_shape, 
             return_intermediates=True,
-            interval=200  # Save every 200 steps for 1000-step diffusion
+            interval=200  # Save every 200 steps
         )
         
         # Unnormalize [-1, 1] to [0, 1]
@@ -84,9 +83,9 @@ def sample_and_log_images(model, diffusion, config, device, epoch, num_samples=8
         )
         mlflow.log_artifact(samples_path)
         
-        # Optional: Save a grid of intermediate steps
+        # Save a grid of intermediate steps
         if len(intermediate_samples) > 0:
-            # Create a grid of intermediate samples at different timesteps
+            # Create a grid of intermediate samples
             selected_indices = [0, len(intermediate_samples)//4, len(intermediate_samples)//2, -1]
             selected_samples = [intermediate_samples[i] for i in selected_indices]
             
@@ -112,7 +111,7 @@ def sample_and_log_images(model, diffusion, config, device, epoch, num_samples=8
     return final_samples
 
 def validate_model(model, dataloader, diffusion, device, config, epoch):
-    """Validation step (optional)."""
+    """Validation step."""
     model.eval()
     total_val_loss = 0
     num_batches = 0
@@ -126,7 +125,6 @@ def validate_model(model, dataloader, diffusion, device, config, epoch):
             total_val_loss += loss.item()
             num_batches += 1
             
-            # Break early for faster validation
             if num_batches >= 10:  # Validate on 10 batches max
                 break
     
@@ -172,7 +170,7 @@ def main():
         
         optimizer = torch.optim.Adam(model.parameters(), lr=config['train']['lr'])
         
-        # Learning rate scheduler with optional warmup
+        # Learning rate scheduler with warmup
         if config['train'].get('use_warmup', False):
             from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
             warmup_epochs = config['train'].get('warmup_epochs', 2)
@@ -229,7 +227,7 @@ def main():
             if epoch % config['train']['save_every'] == 0 or epoch == config['train']['epochs']:
                 ckpt_path = f"checkpoints/ddpm_mnist_epoch_{epoch}.pth"
                 
-                # Enhanced checkpoint with scheduler state
+                # checkpoint with scheduler state
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
@@ -246,7 +244,7 @@ def main():
                 print(f"[*] Generating samples for epoch {epoch}...")
                 samples = sample_and_log_images(model, diffusion, config, device, epoch)
                 
-                # Optional: Log noise schedule info for analysis
+                # Log noise schedule info for analysis
                 if epoch == 1 or epoch % 10 == 0:
                     schedule_info = diffusion.get_noise_schedule_info()
                     # Log some key metrics about noise schedule
